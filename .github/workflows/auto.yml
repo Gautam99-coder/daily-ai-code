@@ -36,8 +36,8 @@ jobs:
 
       - name: Commit and push content
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "Gautam99-coder"
+          git config user.email "${{ secrets.GIT_EMAIL }}"
           git add content
           if git diff --cached --quiet; then
             echo "No content changes to commit."
