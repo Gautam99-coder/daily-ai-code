@@ -131,7 +131,7 @@ async function generateWithAvailableProvider(lessonPlan, recentTitles, lessonDat
   if (groqKey) {
     try {
       const lesson = await generateWithGroq(groqKey, lessonPlan, recentTitles, lessonDate);
-      return { lesson, source: "groq" };
+      return { lesson: requireCompleteLesson(lesson), source: "groq" };
     } catch (error) {
       console.warn(`Groq generation failed: ${error.message}`);
     }
@@ -141,7 +141,7 @@ async function generateWithAvailableProvider(lessonPlan, recentTitles, lessonDat
   if (geminiKey) {
     try {
       const lesson = await generateWithGemini(geminiKey, lessonPlan, recentTitles, lessonDate);
-      return { lesson, source: "gemini" };
+      return { lesson: requireCompleteLesson(lesson), source: "gemini" };
     } catch (error) {
       console.warn(`Gemini generation failed: ${error.message}`);
     }
@@ -150,7 +150,7 @@ async function generateWithAvailableProvider(lessonPlan, recentTitles, lessonDat
   const hfToken = firstDefinedEnv(["HF_TOKEN", "HUGGING_FACE_TOKEN"]);
   if (hfToken) {
     const lesson = await generateWithHuggingFace(hfToken, lessonPlan, recentTitles, lessonDate);
-    return { lesson, source: "huggingface" };
+    return { lesson: requireCompleteLesson(lesson), source: "huggingface" };
   }
 
   return null;
@@ -181,6 +181,7 @@ async function generateWithGroq(apiKey, lessonPlan, recentTitles, lessonDate) {
     ],
     temperature: 0.7,
     max_tokens: 1800,
+    response_format: { type: "json_object" },
   });
 
   const text = response.choices[0].message.content;
@@ -379,15 +380,28 @@ function normalizeLesson(lesson, lessonPlan) {
   };
 }
 
+function requireCompleteLesson(lesson) {
+  const requiredFields = ["title", "language", "difficulty", "problem", "code", "explanation"];
+  const missing = requiredFields.filter((field) => !cleanText(lesson?.[field]));
+  if (!Array.isArray(lesson?.keyPoints) || lesson.keyPoints.filter((p) => cleanText(p)).length < 3) {
+    missing.push("keyPoints");
+  }
+  if (missing.length > 0) {
+    throw new Error(`AI lesson missing required fields: ${missing.join(", ")}`);
+  }
+  return lesson;
+}
+
 function buildFallbackLesson(lessonPlan) {
+  const fallbackLesson = lessonPlan.fallbackLesson || lessonPlan;
   return {
-    title: lessonPlan.title,
-    language: lessonPlan.language,
-    difficulty: lessonPlan.difficulty,
-    problem: lessonPlan.problem,
-    code: lessonPlan.code,
-    explanation: lessonPlan.explanation,
-    keyPoints: lessonPlan.keyPoints,
+    title: fallbackLesson.title,
+    language: fallbackLesson.language,
+    difficulty: fallbackLesson.difficulty,
+    problem: fallbackLesson.problem,
+    code: fallbackLesson.code,
+    explanation: fallbackLesson.explanation,
+    keyPoints: fallbackLesson.keyPoints,
   };
 }
 
@@ -401,7 +415,7 @@ function pickDailyPlan(lessonDate, recentTitles) {
     // Build a synthetic title to check against recent ones
     const syntheticTitle = `${plan.technique} - ${plan.topic}`;
     if (!recentTitles.some((t) => t.toLowerCase().includes(plan.topic.split(" ")[0]))) {
-      return { ...plan, ...FALLBACK_LESSONS[seed % FALLBACK_LESSONS.length], ...plan };
+      return { ...plan, fallbackLesson: FALLBACK_LESSONS[seed % FALLBACK_LESSONS.length] };
     }
   }
 
