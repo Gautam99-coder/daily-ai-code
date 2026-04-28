@@ -168,10 +168,11 @@ async function generateWithGroq(apiKey, lessonPlan, recentTitles, lessonDate) {
         content: [
           "You are a DSA coding teacher. Respond with a single valid JSON object only.",
           "CRITICAL RULES:",
-          "1. Do NOT use backticks anywhere in your response.",
-          "2. The 'code' field must use a plain string with \\n for newlines.",
-          "3. No markdown fences (no ``` anywhere).",
-          "4. No text before or after the JSON object.",
+          "1. Use standard JSON syntax only.",
+          "2. Every string value must be wrapped with double quotes.",
+          "3. Do NOT use triple quotes, markdown fences, or backticks anywhere.",
+          "4. The code field must be a JSON string with escaped newlines as \\n.",
+          "5. No text before or after the JSON object.",
         ].join("\n"),
       },
       {
@@ -179,7 +180,7 @@ async function generateWithGroq(apiKey, lessonPlan, recentTitles, lessonDate) {
         content: buildPrompt(lessonPlan, recentTitles, lessonDate),
       },
     ],
-    temperature: 0.7,
+    temperature: 0.3,
     max_tokens: 1800,
     response_format: { type: "json_object" },
   });
@@ -317,6 +318,8 @@ function buildPrompt(lessonPlan, recentTitles, lessonDate) {
     "- Code must be correct, readable, and self-contained with a working example.",
     "- Include time and space complexity in the explanation.",
     "- Make the lesson feel different from previous days.",
+    "- Escape every newline inside JSON string values as \\n.",
+    "- Do not use Python triple-quoted strings or JavaScript template literals.",
   ].join("\n");
 }
 

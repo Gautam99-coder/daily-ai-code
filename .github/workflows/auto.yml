@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CONTENT_TIMEZONE: Asia/Kolkata
+      GIT_AUTHOR_NAME: Gautam99-coder
+      GIT_AUTHOR_EMAIL: ${{ secrets.GIT_EMAIL || 'Gautam99-coder@users.noreply.github.com' }}
 
     steps:
       - name: Checkout repo
@@ -25,7 +27,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Generate daily lesson
         env:
@@ -36,12 +38,13 @@ jobs:
 
       - name: Commit and push content
         run: |
-          git config user.name "Gautam99-coder"
-          git config user.email "${{ secrets.GIT_EMAIL }}"
+          git config user.name "$GIT_AUTHOR_NAME"
+          git config user.email "$GIT_AUTHOR_EMAIL"
           git add content
           if git diff --cached --quiet; then
             echo "No content changes to commit."
             exit 0
           fi
-          git commit -m "feat: daily DSA lesson $(date +'%Y-%m-%d')"
+          git commit -m "feat: daily DSA lesson $(TZ=Asia/Kolkata date +'%Y-%m-%d')"
+          git pull --rebase origin main
           git push
